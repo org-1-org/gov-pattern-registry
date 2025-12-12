@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "arch.schema.json",
+  "description": "Schema for architecture governance artifacts",
+  "type": "object",
+  "required": ["kind", "metadata"],
+  "properties": {
+    "kind": {
+      "const": "arch"
+    },
+    "metadata": {
+      "$ref": "base.schema.json#/$defs/metadata"
+    },
+    "level": {
+      "$ref": "base.schema.json#/$defs/level"
+    },
+    "extends_pattern": {
+      "$ref": "base.schema.json#/$defs/extends_pattern"
+    },
+    "system": {
+      "type": "object",
+      "description": "System overview",
+      "required": ["name", "purpose"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "System name"
+        },
+        "purpose": {
+          "type": "string",
+          "description": "What the system does"
+        },
+        "scope": {
+          "type": "string",
+          "description": "System scope"
+        },
+        "type": {
+          "type": "string",
+          "description": "System type"
+        },
+        "actors": {
+          "type": "array",
+          "description": "External actors that interact with the system"
+        }
+      },
+      "additionalProperties": true
+    },
+    "containers": {
+      "type": "array",
+      "description": "System containers/components"
+    },
+    "flows": {
+      "type": "array",
+      "description": "Data and control flows"
+    },
+    "decisions": {
+      "type": "array",
+      "description": "Architecture Decision Records (ADRs)"
+    },
+    "viewpoints": {
+      "type": "array",
+      "description": "Architecture viewpoints"
+    },
+    "boundaries": {
+      "type": "array",
+      "description": "System boundaries"
+    },
+    "components": {
+      "type": "array",
+      "description": "System components"
+    },
+    "interfaces": {
+      "type": "array",
+      "description": "System interfaces"
+    },
+    "constraints": {
+      "type": "array",
+      "description": "Architecture constraints"
+    }
+  },
+  "additionalProperties": true
+}

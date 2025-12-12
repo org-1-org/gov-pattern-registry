@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "base.schema.json",
+  "description": "Shared definitions for all governance artifact kinds",
+  "$defs": {
+    "metadata": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Artifact name (lowercase, alphanumeric with hyphens)"
+        },
+        "version": {
+          "type": "string",
+          "description": "Semantic version"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description"
+        },
+        "owner": {
+          "type": "string",
+          "description": "Owner or maintainer"
+        },
+        "status": {
+          "type": "string",
+          "description": "Current status (e.g., draft, active, deprecated)"
+        },
+        "updated": {
+          "type": "string",
+          "description": "Last updated timestamp"
+        }
+      },
+      "additionalProperties": true
+    },
+    "level": {
+      "type": "string",
+      "enum": ["stack", "project", "component"],
+      "description": "What level this artifact targets (optional)"
+    },
+    "extends_pattern": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*(@[0-9]+\\.[0-9]+\\.[0-9]+)?$",
+      "description": "Pattern reference to extend (optional, format: name or name@version)"
+    }
+  }
+}

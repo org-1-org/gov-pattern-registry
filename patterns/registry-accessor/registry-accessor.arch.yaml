@@ -1,0 +1,43 @@
+kind: arch
+metadata:
+  name: registry-accessor
+  version: "1.0.0"
+  description: Pattern for accessing and loading governance artifacts from registries
+
+system:
+  name: Registry Accessor
+  purpose: Load governance patterns from local and remote registries with fail-fast semantics
+
+components:
+  - name: RegistryRoot
+    type: data-source
+    description: Root path to a registry (patterns or org governance)
+
+  - name: PatternDiscovery
+    type: service
+    description: Discovers pattern files within registry directories
+
+  - name: PatternLoader
+    type: service
+    description: Loads and parses YAML pattern files into domain models
+
+interfaces:
+  - name: get_registry_root
+    description: Returns the configured root path for a registry source
+    inputs: [source_type]
+    outputs: [path]
+
+  - name: discover_patterns
+    description: Lists all pattern files in a registry
+    inputs: [source, kind_filter]
+    outputs: [pattern_paths]
+
+  - name: load_pattern
+    description: Loads a specific pattern by name and kind
+    inputs: [name, kind, source]
+    outputs: [pattern]
+
+constraints:
+  - Fail fast if registry root does not exist
+  - Support multiple registry sources (patterns, org)
+  - Directory structure is the interface - no configuration files required

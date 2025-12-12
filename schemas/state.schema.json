@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "state.schema.json",
+  "description": "Schema for state governance artifacts",
+  "type": "object",
+  "required": ["kind", "metadata"],
+  "properties": {
+    "kind": {
+      "const": "state"
+    },
+    "metadata": {
+      "$ref": "base.schema.json#/$defs/metadata"
+    },
+    "level": {
+      "$ref": "base.schema.json#/$defs/level"
+    },
+    "extends_pattern": {
+      "$ref": "base.schema.json#/$defs/extends_pattern"
+    },
+    "maturity": {
+      "type": "object",
+      "description": "Current maturity level",
+      "required": ["level"],
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": ["alpha", "beta", "stable", "mature"],
+          "description": "Maturity level"
+        },
+        "assessed_at": {
+          "type": "string",
+          "description": "When maturity was last assessed"
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Why this maturity level"
+        },
+        "blockers_to_next": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "What blocks advancement to next level"
+        }
+      },
+      "additionalProperties": true
+    },
+    "current_focus": {
+      "type": "object",
+      "description": "Current development focus"
+    },
+    "golden_paths": {
+      "type": "array",
+      "description": "Recommended approaches"
+    },
+    "canonizer_refs": {
+      "type": "array",
+      "description": "References to canonizer schemas"
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Extension points and frozen areas"
+    },
+    "implementation": {
+      "type": "object",
+      "description": "Implementation status"
+    },
+    "capabilities": {
+      "type": "array",
+      "description": "Capability status"
+    },
+    "roadmap": {
+      "type": "array",
+      "description": "Future plans"
+    }
+  },
+  "additionalProperties": true
+}

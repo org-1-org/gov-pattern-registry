@@ -1,0 +1,182 @@
+# ingestion-tool.policy.yaml
+# Pattern: Generic data ingestion tool policies
+# Version: 0.1.0
+#
+# Enforceable rules for ingestion tool implementations.
+# Focus on rules that won't rot and can be validated.
+
+kind: policy
+version: "0.1.0"
+level: project
+
+metadata:
+  name: ingestion-tool
+  description: |
+    Policy constraints for data ingestion tools.
+    Rules focus on security, reliability, and maintainability.
+
+# -----------------------------------------------------------------------------
+# Security Policies
+# -----------------------------------------------------------------------------
+security:
+  - id: SEC-001
+    rule: No secrets in repository
+    description: |
+      Credentials, API keys, tokens, and passwords must never be committed
+      to version control. Use environment variables or external secret stores.
+    severity: error
+    validation:
+      - No files matching *.env with actual values (template .env.example allowed)
+      - No hardcoded API keys in source files
+      - No OAuth tokens in source files
+      - credentials.json must be in .gitignore
+
+  - id: SEC-002
+    rule: Credentials loaded via abstraction
+    description: |
+      Adapters must receive authenticated clients, never raw credentials.
+      Credential loading must go through a CredentialStore abstraction.
+    severity: error
+    validation:
+      - Adapters do not import os.environ directly for secrets
+      - Adapters receive client objects, not credential dicts
+
+  - id: SEC-003
+    rule: Token caches excluded from version control
+    description: |
+      Token cache files (MSAL caches, session files) must be gitignored.
+    severity: error
+    validation:
+      - Token cache directory in .gitignore
+      - No *.bin token files committed
+      - No session JSON files committed
+
+  - id: SEC-004
+    rule: Token caches are local-only with predictable paths
+    description: |
+      Token/session caches must be stored in a predictable, documented local path.
+      Adapters must never depend on committed token artifacts. The path should be
+      either project-local (e.g., .tokens/) or user-local (e.g., ~/.local/share/<tool>/tokens/).
+    severity: error
+    validation:
+      - Token cache path is documented in project README or arch.yaml
+      - Path is either .tokens/ (project-local) or ~/.local/share/<tool>/ (user-local)
+      - Adapters do not fail at import time if token cache is missing
+      - Token cache creation is lazy (on first auth, not on import)
+
+# -----------------------------------------------------------------------------
+# Adapter Policies
+# -----------------------------------------------------------------------------
+adapters:
+  - id: ADP-001
+    rule: Connector modules must declare source and version
+    description: |
+      Every adapter must expose source (provider name) and stream (object type)
+      as class attributes or properties.
+    severity: error
+    validation:
+      - Adapter class has `source: str` attribute
+      - Adapter class has `stream: str` attribute
+
+  - id: ADP-002
+    rule: Every connector must define cursor semantics
+    description: |
+      Adapters must document how they interpret since/until parameters
+      and what timestamp field they filter on.
+    severity: warning
+    validation:
+      - Adapter docstring or comments explain date filtering
+      - extract() method accepts since and until parameters
+
+  - id: ADP-003
+    rule: One adapter class per source-stream combination
+    description: |
+      Each adapter should handle exactly one source+stream pair.
+      Avoids god classes and simplifies testing.
+    severity: warning
+    validation:
+      - Each adapter file contains one primary Stream class
+      - source+stream combination is unique across adapters
+
+  - id: ADP-004
+    rule: Adapters yield raw provider records
+    description: |
+      Adapters must not transform records into custom schemas.
+      They yield the raw dict/JSON from the provider API.
+    severity: warning
+    validation:
+      - extract() yields dict[str, Any] or equivalent
+      - No custom dataclasses returned (except for parsed sources like PDFs)
+
+# -----------------------------------------------------------------------------
+# Output Policies
+# -----------------------------------------------------------------------------
+output:
+  - id: OUT-001
+    rule: Emit is append-only unless documented
+    description: |
+      Ingestion tools extract and emit records. They do not update or delete
+      records in the source. If destructive operations exist, they must be
+      explicitly documented.
+    severity: warning
+    validation:
+      - No DELETE or PUT calls to source APIs (unless explicitly documented)
+      - Adapters are read-only by default
+
+  - id: OUT-002
+    rule: Pagination handled internally
+    description: |
+      Adapters must handle pagination transparently. Callers should not
+      need to manage page tokens or cursors.
+    severity: error
+    validation:
+      - extract() returns complete result set for time window
+      - No page_token parameters exposed to callers
+
+# -----------------------------------------------------------------------------
+# Configuration Policies
+# -----------------------------------------------------------------------------
+configuration:
+  - id: CFG-001
+    rule: Stream registry is the source of truth
+    description: |
+      All configured streams must be defined in a central registry.
+      Ad-hoc stream construction should be discouraged.
+    severity: warning
+    validation:
+      - STREAMS dict or equivalent registry exists
+      - Public API resolves streams via registry
+
+  - id: CFG-002
+    rule: Identity format is provider-scoped
+    description: |
+      Identity strings should be prefixed with provider name for clarity.
+      Format: provider:account_name
+    severity: warning
+    validation:
+      - Identity strings follow provider:name pattern
+      - Registry maps friendly names to provider:identity pairs
+
+# -----------------------------------------------------------------------------
+# Testing Policies
+# -----------------------------------------------------------------------------
+testing:
+  - id: TST-001
+    rule: Adapters must be testable with mocked clients
+    description: |
+      Adapter constructors should allow injection of mock auth managers
+      or clients for unit testing.
+    severity: warning
+    validation:
+      - Tests exist that mock the auth layer
+      - No network calls in unit tests
+
+  - id: TST-002
+    rule: Protocol compliance testing
+    description: |
+      Adapters should be tested against the SourceStream protocol/interface
+      to ensure they implement required methods.
+    severity: warning
+    validation:
+      - Tests verify source and stream attributes exist
+      - Tests verify extract() returns iterator

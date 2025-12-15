@@ -1,0 +1,33 @@
+kind: pattern
+
+metadata:
+  name: auth-manager
+  version: "0.1.0"
+  description: "Provider auth module that builds authenticated clients using a credential provider abstraction."
+  status: active
+
+scope:
+  level: module
+  domain: auth
+
+composes_contracts:
+  - credential-provider@0.1.0
+
+recommends_policies:
+  - credential-hygiene@0.1.0
+
+invariants:
+  - "Auth logic is isolated from adapters; adapters receive clients, not secrets."
+  - "Token refresh delegated to provider SDK where possible."
+  - "Token cache path is predictable and gitignored."
+
+required_interfaces:
+  auth_manager:
+    shape: "get_client(identity: str) -> Any"
+    notes:
+      - "Identity format is provider:account."
+      - "Credential loading is performed via credential-provider contract."
+
+non_goals:
+  - "Owning org-wide credential storage."
+  - "Network allowlisting policy (separate policy)."

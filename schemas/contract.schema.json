@@ -1,0 +1,53 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "contract.schema.json",
+    "type": "object",
+    "required": [
+        "kind",
+        "metadata",
+        "scope"
+    ],
+    "properties": {
+        "kind": {
+            "const": "contract"
+        },
+        "metadata": {
+            "$ref": "base.schema.json#/$defs/metadata"
+        },
+        "scope": {
+            "$ref": "base.schema.json#/$defs/scope"
+        },
+        "required_attributes": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": true
+            }
+        },
+        "required_methods": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": true
+            }
+        },
+        "optional_methods": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": true
+            }
+        },
+        "constraints": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "versioning": {
+            "type": "object",
+            "additionalProperties": true
+        }
+    },
+    "additionalProperties": true
+}

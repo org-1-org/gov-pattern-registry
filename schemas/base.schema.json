@@ -1,16 +1,19 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "base.schema.json",
-  "description": "Shared definitions for all governance artifact kinds",
+  "description": "Shared definitions for governance catalog artifacts (pattern, contract, policy, module)",
   "$defs": {
     "metadata": {
       "type": "object",
-      "required": ["name", "version"],
+      "required": [
+        "name",
+        "version"
+      ],
       "properties": {
         "name": {
           "type": "string",
           "pattern": "^[a-z][a-z0-9-]*$",
-          "description": "Artifact name (lowercase, alphanumeric with hyphens)"
+          "description": "Artifact id (lowercase, alphanumeric with hyphens)"
         },
         "version": {
           "type": "string",
@@ -24,6 +27,10 @@
           "type": "string",
           "description": "Owner or maintainer"
         },
+        "namespace": {
+          "type": "string",
+          "description": "Optional namespace (e.g., 'org' for org-private contracts)"
+        },
         "status": {
           "type": "string",
           "description": "Current status (e.g., draft, active, deprecated)"
@@ -35,15 +42,35 @@
       },
       "additionalProperties": true
     },
-    "level": {
-      "type": "string",
-      "enum": ["stack", "project", "component"],
-      "description": "What level this artifact targets (optional)"
+    "scope": {
+      "type": "object",
+      "required": [
+        "level",
+        "domain"
+      ],
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": [
+            "module",
+            "package",
+            "repo",
+            "system"
+          ],
+          "description": "Scope level for applicability"
+        },
+        "domain": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Domain tag (e.g., auth, adapters, pdf, infra)"
+        }
+      },
+      "additionalProperties": true
     },
-    "extends_pattern": {
+    "ref": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9-]*(@[0-9]+\\.[0-9]+\\.[0-9]+)?$",
-      "description": "Pattern reference to extend (optional, format: name or name@version)"
+      "description": "Reference in form name or name@semver"
     }
   }
 }

@@ -3,7 +3,11 @@
   "$id": "policy.schema.json",
   "description": "Schema for policy governance artifacts",
   "type": "object",
-  "required": ["kind", "metadata"],
+  "required": [
+    "kind",
+    "metadata",
+    "scope"
+  ],
   "properties": {
     "kind": {
       "const": "policy"
@@ -11,64 +15,134 @@
     "metadata": {
       "$ref": "base.schema.json#/$defs/metadata"
     },
-    "level": {
-      "$ref": "base.schema.json#/$defs/level"
+    "scope": {
+      "$ref": "base.schema.json#/$defs/scope"
     },
-    "extends_pattern": {
-      "$ref": "base.schema.json#/$defs/extends_pattern"
+    "level": {
+      "type": "string",
+      "description": "Optional policy level classifier (e.g., stack, repo, module)."
+    },
+    "references": {
+      "type": "object",
+      "additionalProperties": true
     },
     "rules": {
       "type": "array",
-      "description": "Policy rules",
       "items": {
-        "type": "object",
-        "required": ["id", "description", "severity"],
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Unique rule identifier"
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "rule",
+              "severity"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "rule": {
+                "type": "string"
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "error",
+                  "warning",
+                  "info"
+                ]
+              },
+              "checkable": {
+                "type": "boolean"
+              },
+              "validation": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "notes": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
           },
-          "description": {
-            "type": "string",
-            "description": "What the rule requires"
-          },
-          "severity": {
-            "type": "string",
-            "enum": ["error", "warning", "info"],
-            "description": "How serious violations are"
-          },
-          "rationale": {
-            "type": "string",
-            "description": "Why this rule exists"
-          },
-          "applies_to": {
-            "type": "array",
-            "items": {"type": "string"},
-            "description": "Roles this rule applies to"
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "description",
+              "severity"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "error",
+                  "warning",
+                  "info"
+                ]
+              },
+              "applies_to": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "rationale": {
+                "type": "string"
+              },
+              "refs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": true
           }
-        },
-        "additionalProperties": true
+        ]
       }
     },
     "constraints": {
       "type": "object",
-      "description": "Path, import, and naming constraints"
+      "description": "Path, import, and naming constraints",
+      "additionalProperties": true
     },
     "layers": {
       "type": "array",
-      "description": "Layer dependency rules"
+      "description": "Layer dependency rules",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
     },
     "roles": {
       "type": "object",
-      "description": "Role-specific bindings and directives"
+      "description": "Role-specific bindings and directives",
+      "additionalProperties": true
     },
     "escalation": {
       "type": "array",
-      "description": "Escalation rules"
+      "description": "Escalation rules",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
     },
     "enforcement": {
       "type": "array",
-      "description": "How rules are enforced"
+      "description": "How rules are enforced",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
     }
   },
   "additionalProperties": true

@@ -1,0 +1,20 @@
+kind: pattern
+
+metadata:
+  name: registry-accessor
+  version: "0.1.0"
+  description: "Accessor pattern for discovering, validating, indexing, and exporting governance catalogs."
+  status: active
+
+scope:
+  level: repo
+  domain: governance
+
+invariants:
+  - "Directories are interfaces (no fuzzy discovery)."
+  - "Fail-fast on missing explicit roots when source is specified."
+  - "Artifacts are immutable inputs; accessor does not invent semantics."
+
+required_layout:
+  - "<catalog>/{patterns,contracts,policies}/"
+  - "<org>/{stacks,projects,components}/ (plus optional org-private contracts/)"

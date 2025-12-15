@@ -1,0 +1,34 @@
+kind: contract
+
+metadata:
+  name: adapter-protocol
+  version: "0.1.0"
+  description: "Contract for adapter units resolved by a registry-kernel (attributes + primary method)."
+  status: active
+
+scope:
+  level: module
+  domain: adapters
+
+required_attributes:
+  - name: source
+    type: str
+    description: "Provider/system identifier."
+  - name: stream
+    type: str
+    description: "Object type/domain identifier."
+
+required_methods:
+  - name: extract
+    signature: "extract(since, until) -> Iterator[dict]"
+    notes:
+      - "This signature is the default for source-stream implementations."
+      - "Other domains may define a different primary method, but must be explicit."
+
+error_model:
+  - "UnknownAdapterError for unknown registry keys (kernel-level)."
+  - "Provider errors surfaced as explicit exceptions (no silent drops)."
+
+versioning:
+  stability: stable
+  breaking_changes: "major version bump"

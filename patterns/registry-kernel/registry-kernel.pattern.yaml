@@ -1,0 +1,49 @@
+kind: pattern
+
+metadata:
+  name: registry-kernel
+  version: "0.1.0"
+  description: "Registry-backed adapter kernel (explicit registry + resolver + injected host services)."
+  status: active
+
+scope:
+  level: repo
+  domain: adapters
+
+composes_contracts:
+  - adapter-protocol@0.1.0
+
+recommends_policies:
+  - credential-hygiene@0.1.0
+
+invariants:
+  - "Exactly one authoritative registry (name -> adapter spec)."
+  - "All resolution routes through the resolver (no direct adapter instantiation by callers)."
+  - "Adapters are selected by registry keys, not by scanning installed packages."
+  - "Kernel provides host services via injection (no adapter global state)."
+
+required_layout:
+  - "<package>/config.py (or registry.py) defines the registry."
+  - "<package>/adapters/ contains adapter implementations."
+  - "<package>/__init__.py exposes the resolver/factory entrypoint."
+
+required_interfaces:
+  registry:
+    shape: "dict[str, AdapterSpec]"
+    notes:
+      - "Single registry per domain."
+      - "Keys are stable identifiers."
+  resolver:
+    shape: "resolve(name: str, **opts) -> Adapter"
+    errors:
+      - "UnknownAdapterError"
+      - "InvalidSpecError"
+  injection_boundary:
+    shape: "adapter = Adapter(spec, services=HostServices(...))"
+    notes:
+      - "Adapters must not read credentials directly."
+
+non_goals:
+  - "Dynamic plugin discovery / package installation."
+  - "Manifest-based capability negotiation."
+  - "Auto-magic import scanning."

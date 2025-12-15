@@ -1,0 +1,34 @@
+kind: pattern
+
+metadata:
+  name: source-stream
+  version: "0.1.0"
+  description: "Time-windowed extraction pattern: extract(since, until) yields records; consumer owns checkpoints."
+  status: active
+
+scope:
+  level: module
+  domain: data
+
+invariants:
+  - "Extraction is stateless with respect to checkpoints/watermarks."
+  - "Consumer supplies since/until; module interprets them for the provider."
+  - "Module yields an iterator/stream; does not persist or envelope by default."
+
+contracts:
+  stream_interface:
+    description: "Stable stream/adaptor interface for extractors."
+    recommended_contract: adapter-protocol@0.1.0
+    required_methods:
+      - name: extract
+        signature: "extract(since, until) -> Iterator[dict]"
+    required_attributes:
+      - name: source
+        type: str
+      - name: stream
+        type: str
+
+non_goals:
+  - "Cursor storage, state machines, or watermark persistence."
+  - "Deduplication / idempotency guarantees."
+  - "Event envelope schema."

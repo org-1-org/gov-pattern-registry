@@ -1,0 +1,19 @@
+kind: pattern
+
+metadata:
+  name: plugin-loader
+  version: "0.1.0"
+  description: "STUB: dynamic third-party plugin discovery (not used by default)."
+  status: stub
+
+scope:
+  level: repo
+  domain: adapters
+
+invariants:
+  - "Plugins are external packages (pip-installable)."
+  - "Plugins declare a manifest / capabilities."
+  - "Host performs compatibility and version checks."
+
+non_goals:
+  - "Not part of current stack. Use registry-kernel instead."

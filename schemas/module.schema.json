@@ -1,0 +1,73 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "module.schema.json",
+    "type": "object",
+    "required": [
+        "kind",
+        "metadata",
+        "module_type"
+    ],
+    "properties": {
+        "kind": {
+            "const": "module"
+        },
+        "metadata": {
+            "$ref": "base.schema.json#/$defs/metadata"
+        },
+        "module_kind": {
+            "type": "string",
+            "enum": [
+                "unit",
+                "composite"
+            ]
+        },
+        "module_type": {
+            "type": "string"
+        },
+        "implements": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "pattern",
+                    "at"
+                ],
+                "properties": {
+                    "pattern": {
+                        "$ref": "base.schema.json#/$defs/ref"
+                    },
+                    "at": {
+                        "type": "string"
+                    }
+                },
+                "additionalProperties": true
+            }
+        },
+        "satisfies": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "contract",
+                    "at"
+                ],
+                "properties": {
+                    "contract": {
+                        "$ref": "base.schema.json#/$defs/ref"
+                    },
+                    "at": {
+                        "type": "string"
+                    }
+                },
+                "additionalProperties": true
+            }
+        },
+        "applies_policies": {
+            "type": "array",
+            "items": {
+                "$ref": "base.schema.json#/$defs/ref"
+            }
+        }
+    },
+    "additionalProperties": true
+}

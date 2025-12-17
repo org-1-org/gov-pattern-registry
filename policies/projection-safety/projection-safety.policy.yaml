@@ -1,0 +1,58 @@
+# yaml-language-server: $schema=../../schemas/policy.schema.json
+kind: policy
+
+metadata:
+  name: projection-safety
+  version: "0.1.0"
+  description: "Read-only projection invariants for data pipeline views and syncs."
+  status: active
+
+scope:
+  level: module
+  domain: data
+
+references:
+  patterns:
+    - projection-pipeline@0.1.0
+
+rules:
+  - id: PROJ-001
+    rule: "Projections are read-only"
+    severity: error
+    checkable: true
+    validation:
+      - "Projection views never write back to source tables."
+      - "SQLite sync only writes to local database, never to BigQuery."
+      - "File projection only writes to local filesystem."
+
+  - id: PROJ-002
+    rule: "Projections are idempotent"
+    severity: error
+    checkable: true
+    validation:
+      - "Re-running projection produces identical results."
+      - "SQLite sync uses UPSERT/MERGE semantics."
+      - "File projection overwrites existing files deterministically."
+
+  - id: PROJ-003
+    rule: "Projection SQL is validated"
+    severity: error
+    checkable: true
+    validation:
+      - "Projection SQL starts with SELECT or WITH."
+      - "No mutating keywords (INSERT, UPDATE, DELETE, DROP, etc.)."
+      - "SQL is parameterized, not string-interpolated with user input."
+
+  - id: PROJ-004
+    rule: "Schema changes require migration"
+    severity: warning
+    checkable: false
+    notes: "Adding/removing columns in projection SQL requires coordinated SQLite schema update."
+
+  - id: PROJ-005
+    rule: "Projection outputs are gitignored"
+    severity: warning
+    checkable: true
+    validation:
+      - "SQLite database path is in .gitignore."
+      - "File projection output directory is in .gitignore."

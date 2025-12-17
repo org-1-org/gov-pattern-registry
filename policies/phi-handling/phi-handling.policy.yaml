@@ -1,0 +1,51 @@
+# yaml-language-server: $schema=../../schemas/policy.schema.json
+kind: policy
+
+metadata:
+  name: phi-handling
+  version: "0.1.0"
+  description: "Protected Health Information handling constraints for clinical data pipelines."
+  status: active
+
+scope:
+  level: repo
+  domain: data
+
+rules:
+  - id: PHI-001
+    rule: "PHI stays local"
+    severity: error
+    checkable: true
+    validation:
+      - "PHI data is stored only in approved locations (BigQuery project, local SQLite, local files)."
+      - "No PHI in logs, error messages, or telemetry payloads."
+      - "No PHI transmission to third-party services without explicit authorization."
+
+  - id: PHI-002
+    rule: "Client identity is partitioned"
+    severity: error
+    checkable: true
+    validation:
+      - "Client data is partitioned by client_id in storage."
+      - "Cross-client queries require explicit authorization."
+      - "File projections are organized by client directory."
+
+  - id: PHI-003
+    rule: "Access is auditable"
+    severity: warning
+    checkable: true
+    validation:
+      - "All data access is logged with correlation_id."
+      - "Event log captures who accessed what and when."
+
+  - id: PHI-004
+    rule: "Local storage is encrypted at rest"
+    severity: warning
+    checkable: false
+    notes: "Depends on OS-level disk encryption. Document in deployment guide."
+
+  - id: PHI-005
+    rule: "Retention limits are enforced"
+    severity: warning
+    checkable: false
+    notes: "BigQuery table expiration and local file cleanup policies must be configured."

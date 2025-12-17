@@ -1,0 +1,52 @@
+# yaml-language-server: $schema=../../schemas/pattern.schema.json
+kind: pattern
+
+metadata:
+  name: typed-processor
+  version: "0.1.0"
+  description: "Protocol-based processor with uniform run signature; injectable clients for storage and events."
+  status: active
+
+scope:
+  level: module
+  domain: orchestration
+
+recommends_policies:
+  - credential-hygiene@0.1.0
+
+invariants:
+  - "All processors implement identical run() signature."
+  - "Processors receive clients via injection; never construct them."
+  - "Processor is stateless across invocations."
+  - "Processor type is declared explicitly (class attribute or registration)."
+
+required_interfaces:
+  processor_protocol:
+    shape: |
+      class Processor(Protocol):
+          type: str
+          def run(
+              self,
+              job_spec: dict,
+              context: Context,
+              storage_client: StorageClient,
+              event_client: EventClient
+          ) -> ProcessorResult
+    notes:
+      - "type attribute identifies the processor for dispatch."
+      - "context carries request-scoped metadata (run_id, timestamp, etc.)."
+      - "Clients are injected; processor does not manage credentials."
+  processor_result:
+    shape: |
+      {
+        "status": "success" | "error" | "skipped",
+        "message": str | None,
+        "metrics": dict | None
+      }
+    notes:
+      - "Uniform result envelope for all processors."
+
+non_goals:
+  - "Processor lifecycle management (start/stop hooks)."
+  - "Async execution or coroutine-based processing."
+  - "Internal state persistence between runs."

@@ -1,0 +1,56 @@
+# yaml-language-server: $schema=../../schemas/pattern.schema.json
+kind: pattern
+
+metadata:
+  name: projection-pipeline
+  version: "0.1.0"
+  description: "Multi-stage projection: BQ view defines shape, SQLite sync for local query, file projection for human access."
+  status: active
+
+scope:
+  level: repo
+  domain: data
+
+composes_contracts:
+  - typed-processor@0.1.0
+
+invariants:
+  - "Projection is read-only; never writes back to source tables."
+  - "BQ view is the authoritative projection definition (SQL)."
+  - "SQLite sync is incremental via watermark (projected_at, event_time)."
+  - "File projection reads from SQLite, not directly from BQ."
+  - "Each stage is idempotent; re-running produces same result."
+
+required_layout:
+  - "<package>/sql/projections.py contains BQ view SQL definitions."
+  - "<package>/processors/ contains SyncSqliteProcessor, FileProjectionProcessor."
+  - "SQLite database is local (e.g., ~/clinical-vault/local.db)."
+  - "File output directory is configurable (e.g., ~/clinical-vault/views/)."
+
+required_interfaces:
+  projection_sql:
+    shape: |
+      PROJ_<ENTITY> = '''
+        SELECT
+          ...projection columns...
+        FROM canonical_objects
+        WHERE ...
+      '''
+    notes:
+      - "Named constants for each entity projection."
+      - "SQL is parameterized for watermark filtering."
+  sync_processor:
+    shape: "SyncSqliteProcessor.run(job_spec, context, storage, events)"
+    notes:
+      - "Reads from BQ view, upserts to SQLite."
+      - "Tracks last sync watermark per entity."
+  file_processor:
+    shape: "FileProjectionProcessor.run(job_spec, context, storage, events)"
+    notes:
+      - "Reads from SQLite, writes Markdown/text files."
+      - "Organizes by client/entity hierarchy."
+
+non_goals:
+  - "Real-time streaming (batch-oriented)."
+  - "Bi-directional sync (projection is one-way)."
+  - "Schema evolution handling (manual migration)."

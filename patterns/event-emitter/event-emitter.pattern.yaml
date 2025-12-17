@@ -1,0 +1,55 @@
+# yaml-language-server: $schema=../../schemas/pattern.schema.json
+kind: pattern
+
+metadata:
+  name: event-emitter
+  version: "0.1.0"
+  description: "Two-table event emission: lean event_log for indexing, raw_objects for full payload storage."
+  status: active
+
+scope:
+  level: repo
+  domain: data
+
+invariants:
+  - "Events split into two tables: event_log (indexed metadata) and raw_objects (full payload)."
+  - "event_log contains: run_id, event_id, source, stream, event_time, schema_ref, object_id."
+  - "raw_objects contains: object_id, payload (JSON), ingested_at."
+  - "object_id is the foreign key linking event_log to raw_objects."
+  - "Payloads are stored exactly once; event_log may have multiple refs to same object."
+
+required_interfaces:
+  event_log_schema:
+    shape: |
+      CREATE TABLE event_log (
+        run_id STRING,
+        event_id STRING,
+        source STRING,
+        stream STRING,
+        event_time TIMESTAMP,
+        schema_ref STRING,
+        object_id STRING,
+        ingested_at TIMESTAMP
+      )
+    notes:
+      - "Optimized for time-range and source/stream filtering."
+      - "schema_ref is Iglu-style URI (iglu:vendor/name/format/version)."
+  raw_objects_schema:
+    shape: |
+      CREATE TABLE raw_objects (
+        object_id STRING PRIMARY KEY,
+        payload JSON,
+        ingested_at TIMESTAMP
+      )
+    notes:
+      - "object_id is content-addressable hash or UUID."
+      - "payload is unmodified source data."
+  emit_interface:
+    shape: "emit(source, stream, event_time, schema_ref, payload) -> event_id"
+    notes:
+      - "Client handles object_id generation and table writes."
+
+non_goals:
+  - "Schema validation at emission time."
+  - "Payload transformation during emission."
+  - "Retention policy enforcement (handled by storage layer)."

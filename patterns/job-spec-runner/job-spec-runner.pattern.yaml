@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=../../schemas/pattern.schema.json
+kind: pattern
+
+metadata:
+  name: job-spec-runner
+  version: "0.1.0"
+  description: "Declarative job specification dispatched to typed processors; jobs defined in YAML/JSON, not code."
+  status: active
+
+scope:
+  level: repo
+  domain: orchestration
+
+composes_contracts:
+  - typed-processor@0.1.0
+
+recommends_policies:
+  - credential-hygiene@0.1.0
+
+invariants:
+  - "Job definitions are data (YAML/JSON), not code."
+  - "Processor selection is driven by job spec 'type' field."
+  - "Runner dispatches to exactly one processor per job type."
+  - "Job specs are serializable; no closures or runtime-only state."
+  - "Processor registry is explicit; no scanning or auto-discovery."
+
+required_layout:
+  - "<package>/jobs/ contains job spec files or loaders."
+  - "<package>/processors/ contains processor implementations."
+  - "<package>/runner.py or job_runner.py dispatches specs to processors."
+
+required_interfaces:
+  job_spec:
+    shape: |
+      {
+        "type": str,           # processor selector
+        "name": str,           # human-readable label
+        "params": dict,        # processor-specific parameters
+        ...
+      }
+    notes:
+      - "Type field is required; maps to processor."
+      - "Additional fields are processor-specific."
+  runner:
+    shape: "run(job_spec, context, storage_client, event_client) -> result"
+    errors:
+      - "UnknownJobTypeError"
+      - "InvalidJobSpecError"
+      - "ProcessorError"
+  processor_registry:
+    shape: "dict[str, Processor]"
+    notes:
+      - "Keys are job type names."
+      - "Values are processor instances or factories."
+
+non_goals:
+  - "DAG orchestration or dependency resolution between jobs."
+  - "Retry logic or failure recovery (handled at higher level)."
+  - "Dynamic processor loading from external packages."

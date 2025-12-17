@@ -1,0 +1,53 @@
+# yaml-language-server: $schema=../../schemas/pattern.schema.json
+kind: pattern
+
+metadata:
+  name: composite-job
+  version: "0.1.0"
+  description: "Group multiple jobs into a single orchestration unit; sequential execution with shared context."
+  status: active
+
+scope:
+  level: module
+  domain: orchestration
+
+composes_contracts:
+  - job-spec-runner@0.1.0
+
+invariants:
+  - "Composite job contains ordered list of child jobs."
+  - "Child jobs execute sequentially (not parallel)."
+  - "Failure in child job halts composite execution (fail-fast)."
+  - "All child jobs share same run context (run_id, timestamp)."
+  - "Composite job itself is a job type handled by CompositeProcessor."
+
+required_interfaces:
+  composite_spec:
+    shape: |
+      {
+        "type": "composite",
+        "name": str,
+        "jobs": [
+          { "type": str, "name": str, "params": dict },
+          ...
+        ]
+      }
+    notes:
+      - "jobs array defines execution order."
+      - "Each child job is a full job spec."
+  composite_processor:
+    shape: |
+      class CompositeProcessor:
+          type = "composite"
+          def run(self, job_spec, context, storage, events):
+              for child in job_spec["jobs"]:
+                  runner.run(child, context, storage, events)
+    notes:
+      - "Delegates to runner for each child job."
+      - "Aggregates results from all children."
+
+non_goals:
+  - "Parallel or async child execution."
+  - "Conditional branching based on child results."
+  - "DAG-based dependency resolution."
+  - "Retry or resume from failed child."

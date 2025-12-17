@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=../../schemas/policy.schema.json
+kind: policy
+
+metadata:
+  name: incremental-sync
+  version: "0.1.0"
+  description: "Watermark-based incremental processing constraints for data pipelines."
+  status: active
+
+scope:
+  level: module
+  domain: data
+
+rules:
+  - id: INCR-001
+    rule: "Watermarks are explicit"
+    severity: error
+    checkable: true
+    validation:
+      - "Sync operations use explicit timestamp columns (last_seen, canonicalized_at, projected_at)."
+      - "Watermark column is indexed for efficient filtering."
+      - "No implicit 'process everything' modes in production."
+
+  - id: INCR-002
+    rule: "Watermarks survive failures"
+    severity: error
+    checkable: true
+    validation:
+      - "Watermark is updated only after successful processing."
+      - "Failed runs do not advance watermark."
+      - "Reprocessing from earlier watermark is always safe (idempotent)."
+
+  - id: INCR-003
+    rule: "Full refresh is opt-in"
+    severity: warning
+    checkable: true
+    validation:
+      - "Full refresh requires explicit flag (--full, --since=epoch)."
+      - "Default behavior is incremental from last watermark."
+
+  - id: INCR-004
+    rule: "Watermark queries are bounded"
+    severity: warning
+    checkable: true
+    validation:
+      - "Queries include both lower bound (since) and upper bound (until)."
+      - "Upper bound prevents processing in-flight data."

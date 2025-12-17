@@ -1,0 +1,172 @@
+# yaml-language-server: $schema=../../schemas/pattern.schema.json
+kind: pattern
+
+metadata:
+  name: quarantined-script-runner
+  version: "0.1.0"
+  description: "Governed wrapper for provisional bash scripts with TTL-based escalation to hard block. Scripts are formalized toil; promotion means writing a spec and building properly."
+  status: active
+
+scope:
+  level: repo
+  domain: orchestration
+
+composes_contracts:
+  - event-emitter@0.1.0
+
+recommends_policies:
+  - credential-hygiene@0.1.0
+  - script-hygiene@0.1.0
+
+rationale:
+  toil_principle: |
+    Scripts governed by this pattern are formalized toil (per Google SRE):
+    "manual, repetitive, automatable, tactical, devoid of enduring value."
+
+    The governance exists not to legitimize scripts, but to create friction
+    that drives elimination. Toil expands if left unchecked—the TTL escalation
+    exists to prevent scripts from becoming permanent infrastructure.
+
+    If a human operator needs to touch your system during normal operations,
+    you have a bug. Scripts are the bug; specs are the fix.
+
+invariants:
+  - "Scripts are formalized toil; they are not first-class capabilities."
+  - "Scripts are glue-only: orchestrate steps, validate inputs, call jobs/processors/verbs."
+  - "Scripts do not contain parsing, transforms, or branchy business logic."
+  - "Every script invocation is wrapped in event emission (start, complete, fail)."
+  - "Scripts have explicit metadata: created_at, owner, ttl_days, promotion_target, description."
+  - "Scripts are namespaced separately from jobs (life script vs life run)."
+  - "Promotion means writing a spec and building properly, not running a command."
+  - "Scripts are user-scoped by default; repo-scoped scripts should be rare."
+  - "Script execution is subprocess-based; scripts never run in-process."
+  - "Runner enforces `set -euo pipefail` or requires scripts to start with it."
+
+required_layout:
+  - "~/.life/scripts/ is the default user-local script directory."
+  - "./scripts/ is the optional repo-local script directory (rare)."
+  - "<name>.sh is the script entry (bash only)."
+  - "<name>.meta.yaml contains script metadata (same directory)."
+  - "~/.life/state/scripts/<name>.json stores run state."
+
+required_interfaces:
+  script_metadata:
+    shape: |
+      {
+        "name": str,                    # script identifier, [a-z0-9-]+ only
+        "description": str,             # what it does (REQUIRED, no silent mystery scripts)
+        "owner": str,                   # github handle or email (e.g. "@alice" or "alice@example.com")
+        "created_at": str,              # ISO date YYYY-MM-DD
+        "ttl_days": int,                # days before escalation starts (default: 30)
+        "promotion_target": str,        # where this goes when you write the real spec
+        "calls": list[str],             # jobs/verbs/processors this script invokes
+      }
+    notes:
+      - "description is required; no silent mystery scripts."
+      - "owner must be github handle (@user) or email; no garbage values."
+      - "promotion_target is required; forces 'this has a destiny' thinking."
+      - "ttl_days triggers escalation; hard block occurs at 3×TTL unless --force."
+      - "calls documents dependencies for when you write the real spec."
+      - "name must be [a-z0-9-]+ only; no path traversal, no dots."
+
+  script_search_paths:
+    shape: |
+      Search order (first match wins):
+        1. $LIFE_SCRIPTS_DIR (if set)
+        2. ~/.life/scripts/ (user-local, default)
+        3. ./scripts/ (repo-local, rare + deliberate)
+    notes:
+      - "User-scoped by default; repo scripts should be rare."
+      - "If committing a script, consider writing a proper job."
+
+  script_state:
+    shape: |
+      {
+        "first_seen": str,              # ISO datetime of first run
+        "last_run": str,                # ISO datetime of last run
+        "run_count": int,               # total invocations
+        "force_count": int,             # times --force was used after block
+      }
+    notes:
+      - "State persisted in ~/.life/state/scripts/<name>.json"
+      - "TTL uses max(created_at, first_seen) to prevent gaming."
+      - "Used to drive escalating warnings."
+
+  script_runner:
+    shape: "life script <name> [args]"
+    behavior:
+      - "Validates name: [a-z0-9-]+ only, no path traversal."
+      - "Searches paths in order, loads metadata, validates."
+      - "Runs script as subprocess: bash -c 'set -euo pipefail; source <script>.sh' [args]"
+      - "Passes LIFE_CORRELATION_ID in environment."
+      - "Wraps execution in event emission."
+      - "Tracks first_seen, last_run, run_count in state."
+      - "Emits escalating warnings based on age/usage."
+      - "Non-TTY mode: Level 2+ scripts fail unless --yes (Level 2) or --force (Level 3)."
+    flags:
+      - "--force: bypass Level 3 block, logged as override (required at 3×TTL)"
+      - "--yes: bypass Level 2 confirmation in non-TTY mode (not sufficient at Level 3)"
+      - "--info: show metadata and TTL status, don't run"
+      - "--list: list scripts in search path (debugging aid)"
+    errors:
+      - "ScriptNotFoundError: no script or metadata at any search path"
+      - "ScriptBlockedError: >3×ttl_days, requires --force"
+      - "ScriptNameError: invalid characters or path traversal"
+
+  escalation_levels:
+    shape: |
+      Level 1 (age > ttl_days):
+        - Emit warning: "Script '{name}' is stale ({age} days). Consider writing a proper spec."
+        - Log event: script.warning.stale
+        - Execution continues.
+
+      Level 2 (age > 2×ttl_days):
+        - If TTY: prompt "Script '{name}' is overdue. Continue? [y/N]"
+        - If not TTY: fail unless --yes or --force
+        - --yes bypasses confirmation, execution continues.
+        - Log event: script.warning.overdue
+
+      Level 3 (age > 3×ttl_days):
+        - HARD BLOCK. Execution fails.
+        - --yes is NOT sufficient. Only --force bypasses.
+        - If --force: log event script.override.forced
+        - Emit: "Script '{name}' blocked. Use --force to override (this is logged)."
+    notes:
+      - "Warnings are emitted to stderr, not stdout."
+      - "--force usage is auditable evidence of tech debt."
+      - "Non-TTY mode never prompts; fails cleanly for CI/automation."
+      - "--yes is for 'I acknowledge the risk'; --force is for 'I accept the debt'."
+
+  event_emission:
+    shape: |
+      Events emitted through standard life event emitter:
+        - script.started: name, script_dir_scope, args_hash, args_redacted, correlation_id, owner, age_days, tier
+        - script.completed: name, correlation_id, duration_ms, exit_code
+        - script.failed: name, correlation_id, exit_code, stderr_tail
+        - script.override.forced: name, correlation_id, age_days, forced_by, reason
+    notes:
+      - "script_dir_scope is one of: 'env' (LIFE_SCRIPTS_DIR), 'user' (~/.life/scripts), 'repo' (./scripts)"
+      - "Uses same emitter as 'life run' with orchestrator_contract: standard envelope."
+      - "args_redacted includes flags only, no values (for debugging)."
+      - "args_hash is sha256 of full args (for correlation)."
+
+non_goals:
+  - "Scripts are not first-class capabilities."
+  - "Scripts do not appear in project.registry or 'life list'."
+  - "No automatic promotion command; promotion means writing a spec."
+  - "Scripts do not replace jobs for repeatable, audited work."
+  - "Complex business logic does not belong in scripts."
+  - "'--list' is a debugging aid, not supported UX for discovery."
+
+examples:
+  valid_script_usage:
+    - "Glue to call lorchestra pipeline then send notification email."
+    - "Validate input file exists, then invoke dataverse.sync job."
+    - "Run sequence of existing verbs with hardcoded parameters for testing."
+    - "One-off migration that calls existing processors."
+
+  invalid_script_usage:
+    - "Parse CSV and transform records (should be processor)."
+    - "Implement retry logic with backoff (should be in runner)."
+    - "Business logic with conditionals (should be proper code with tests)."
+    - "Long-lived operational scripts (should be jobs)."

@@ -1,0 +1,90 @@
+# yaml-language-server: $schema=../../schemas/policy.schema.json
+kind: policy
+
+metadata:
+  name: script-hygiene
+  version: "0.1.0"
+  description: "Enforceable constraints for incubator scripts: TTL enforcement, glue-only rule, event wrapping, naming validation."
+  status: active
+
+scope:
+  level: repo
+  domain: orchestration
+
+references:
+  patterns:
+    - quarantined-script-runner@0.1.0
+
+rules:
+  - id: SCRIPT-001
+    rule: "Scripts must have metadata file"
+    severity: error
+    checkable: true
+    validation:
+      - "Every <name>.sh has corresponding <name>.meta.yaml in same directory."
+      - "Metadata includes required fields: name, description, owner, created_at, ttl_days, promotion_target."
+      - "description is required; no silent mystery scripts."
+      - "owner must be github handle (@user) or email; no garbage values."
+
+  - id: SCRIPT-002
+    rule: "Scripts are glue-only"
+    severity: error
+    checkable: false
+    notes: "Requires code review. Scripts should only orchestrate, validate, and invoke."
+    validation:
+      - "No data processing (awk/sed transforms of data files)."
+      - "No loops over data records (iteration belongs in processors)."
+      - "No complex retry logic (belongs in runner)."
+      - "Call existing jobs/commands; don't reinvent them."
+
+  - id: SCRIPT-003
+    rule: "Scripts emit events on invocation"
+    severity: error
+    checkable: true
+    validation:
+      - "Script runner wraps execution in script.started / script.completed / script.failed events."
+      - "Events include script name, args_hash, args_redacted, and correlation_id."
+
+  - id: SCRIPT-004
+    rule: "Stale scripts escalate to hard block"
+    severity: error
+    checkable: true
+    validation:
+      - "Level 2 (>2×TTL): --yes bypasses confirmation in non-TTY mode."
+      - "Level 3 (>3×TTL): HARD BLOCK. --yes is NOT sufficient; only --force bypasses."
+      - "--force usage logged as script.override.forced event."
+      - "Non-TTY mode never prompts; fails cleanly for CI/automation."
+
+  - id: SCRIPT-005
+    rule: "Scripts must declare promotion target"
+    severity: warning
+    checkable: true
+    validation:
+      - "Metadata promotion_target field specifies where this goes when built properly."
+      - "Forces 'this has a destiny' thinking; reduces script limbo."
+
+  - id: SCRIPT-006
+    rule: "Scripts are not registered capabilities"
+    severity: error
+    checkable: true
+    validation:
+      - "Scripts do not appear in registry.commands, registry.jobs, or registry.workflows."
+      - "Scripts are explicitly second-class; only jobs/commands are discoverable."
+
+  - id: SCRIPT-007
+    rule: "Script names are validated"
+    severity: error
+    checkable: true
+    validation:
+      - "Script name must match [a-z0-9-]+ only."
+      - "No path separators, no dots (except .sh), no path traversal."
+      - "Validation happens before any filesystem access."
+
+  - id: SCRIPT-008
+    rule: "Scripts run as subprocess"
+    severity: error
+    checkable: true
+    validation:
+      - "Scripts execute via subprocess.run(['bash', path, *args])."
+      - "Scripts never run in-process or get sourced."
+      - "LIFE_CORRELATION_ID passed in environment."

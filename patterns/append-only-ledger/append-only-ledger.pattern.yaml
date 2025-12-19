@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=../../schemas/pattern.schema.json
+kind: pattern
+
+metadata:
+  name: append-only-ledger
+  version: "0.1.0"
+  description: "Append-only event table with deterministic idempotency key and read-side dedupe."
+  status: active
+
+scope:
+  level: module
+  domain: data
+
+invariants:
+  - "No UPDATE or DELETE on ledger table."
+  - "event_id is deterministic: sha256 of canonical envelope (excluding event_id itself)."
+  - "Streaming insert uses insertId for best-effort dedupe."
+  - "Read-side dedupe is REQUIRED; streaming insertId is not a correctness guarantee."
+  - "Dedupe rule: when duplicates exist, keep max(ingested_at)."
+  - "Ordering: occurred_at ASC, ingested_at ASC, event_id ASC."
+
+recommends_patterns:
+  - canonical-serialization@0.1.0
+
+recommends_policies:
+  - phi-handling@0.1.0
+
+required_interfaces:
+  append:
+    shape: "append(rows, id_column) -> AppendResult"
+    notes:
+      - "Inserts rows via streaming insert."
+      - "Uses id_column value as insertId for best-effort dedupe."
+      - "Returns rows_inserted count and errors list."
+
+  query_with_dedupe:
+    shape: "query_aggregate(aggregate_id) -> Iterator[Event]"
+    notes:
+      - "Dedupes by event_id using QUALIFY ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY ingested_at DESC) = 1."
+      - "Orders results by occurred_at ASC, ingested_at ASC, event_id ASC."
+
+  event_id_generation:
+    shape: "event_id = sha256_hex(canonical_json(envelope))"
+    notes:
+      - "Envelope includes all fields except event_id and ingested_at."
+      - "payload_sha256 is hashed, not raw payload (avoids large hash inputs)."
+
+non_goals:
+  - "Write-side dedupe guarantees (use read-side)."
+  - "Staging tables (streaming insert is sufficient at org-of-one scale)."
+  - "Schema migrations (create-if-not-exists only in v0.1)."
+
+examples:
+  - name: storacle.WalClient
+    repo: workspace/storacle
+    notes: "Domain event WAL for therapeutic artifacts."
+  - name: storacle.OpsClient
+    repo: workspace/storacle
+    notes: "Job/command telemetry."

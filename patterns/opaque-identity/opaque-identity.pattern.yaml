@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=../../schemas/pattern.schema.json
+kind: pattern
+
+metadata:
+  name: opaque-identity
+  version: "0.1.0"
+  description: "Salted hash-based identifiers that hide PII from storage keys and indexes."
+  status: active
+
+scope:
+  level: module
+  domain: data
+
+recommends_policies:
+  - phi-handling@0.1.0
+
+invariants:
+  - "Raw PII (email, phone, name) NEVER appears in table keys, event_id hash inputs, or aggregate_id."
+  - "subject_id format: 'subj:' + sha256(salt + ':' + normalized_value)[:32]"
+  - "aggregate_id format: 'agg:' + sha256(aggregate_type + ':' + subject_id + ':' + slot)[:32]"
+  - "Namespace salt is REQUIRED and loaded from environment."
+  - "Salt must be kept secret; enables future re-keying."
+  - "Human-readable refs (email, name) stored in payload.refs ONLY."
+
+required_interfaces:
+  make_subject_id:
+    shape: "make_subject_id(namespace_salt: str, normalized_email: str) -> str"
+    notes:
+      - "Returns opaque ID like 'subj:7f3a2b1c4d5e6f7a...'"
+      - "32 hex chars = 128 bits collision resistance."
+      - "Raises if salt or email is empty."
+
+  make_aggregate_id:
+    shape: "make_aggregate_id(aggregate_type: str, subject_id: str, slot: str | None) -> str"
+    notes:
+      - "Returns opaque ID like 'agg:9e4d5c6b7a8f9e0d...'"
+      - "subject_id must be from make_subject_id(), NOT raw email."
+      - "slot is optional discriminator (e.g., 'progress_report:2025-12-18')."
+
+  config_requirement:
+    shape: "STORACLE_NAMESPACE_SALT environment variable"
+    notes:
+      - "Hard fail if not set."
+      - "Never log or expose the salt value."
+
+non_goals:
+  - "Reversible encryption (this is one-way hashing)."
+  - "Multi-tenant salt management (single org-of-one salt)."
+  - "Key rotation automation (manual re-key with migration)."
+
+examples:
+  - name: storacle.identity
+    repo: workspace/storacle
+    notes: "make_subject_id(), make_aggregate_id()"

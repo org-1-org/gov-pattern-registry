@@ -1,0 +1,50 @@
+# yaml-language-server: $schema=../../schemas/pattern.schema.json
+kind: pattern
+
+metadata:
+  name: canonical-serialization
+  version: "0.1.0"
+  description: "Deterministic JSON serialization for stable hashing across runs."
+  status: active
+
+scope:
+  level: module
+  domain: data
+
+invariants:
+  - "Keys sorted alphabetically (deterministic ordering)."
+  - "Timestamps: RFC3339, always UTC with Z suffix (e.g., 2025-12-18T10:00:00Z)."
+  - "Floats: BANNED. Use strings or integers."
+  - "Encoding: UTF-8, no BOM."
+  - "Separators: compact (',', ':') with no extra whitespace."
+  - "Same input always produces identical output across runs."
+
+required_interfaces:
+  canonical_json:
+    shape: "canonical_json(obj: dict) -> str"
+    notes:
+      - "json.dumps(obj, sort_keys=True, separators=(',', ':'), ensure_ascii=False)"
+      - "Must handle nested objects (keys sorted at all levels)."
+
+  sha256_hex:
+    shape: "sha256_hex(content: str) -> str"
+    notes:
+      - "hashlib.sha256(content.encode('utf-8')).hexdigest()"
+      - "Returns lowercase hex string (64 chars)."
+
+  normalize_timestamp:
+    shape: "normalize_occurred_at(dt: datetime) -> str"
+    notes:
+      - "Rejects naive datetimes (no timezone). Hard fail."
+      - "Converts to UTC."
+      - "Formats as RFC3339 with Z suffix."
+
+non_goals:
+  - "Supporting floats (they're non-deterministic across platforms)."
+  - "Pretty-printing or human-readable output."
+  - "Schema validation during serialization."
+
+examples:
+  - name: storacle.canonical
+    repo: workspace/storacle
+    notes: "canonical_json(), sha256_hex(), normalize_occurred_at()"

@@ -1,0 +1,52 @@
+# yaml-language-server: $schema=../../schemas/pattern.schema.json
+kind: pattern
+
+metadata:
+  name: delegated-auth
+  version: "0.1.0"
+  description: "Library receives pre-authenticated client; does not own credential loading."
+  status: active
+
+scope:
+  level: module
+  domain: auth
+
+recommends_policies:
+  - credential-hygiene@0.1.0
+
+invariants:
+  - "Library constructors accept pre-authenticated clients as arguments."
+  - "from_env() resolves config (datasets, prefixes, modes) ONLY, not credentials."
+  - "No direct environment variable reading for secrets within the library."
+  - "Credential loading is the caller's responsibility (authctl, ADC, etc.)."
+  - "Library has no knowledge of how credentials were obtained."
+
+required_interfaces:
+  constructor_injection:
+    shape: "Client(authenticated_client: Any, config: Config)"
+    notes:
+      - "authenticated_client is a ready-to-use SDK client."
+      - "Library does not call .from_service_account_file() or similar."
+
+  config_from_env:
+    shape: "Config.from_env() -> Config"
+    notes:
+      - "Reads dataset names, table prefixes, dry_run flags."
+      - "Does NOT read secrets, tokens, or credentials."
+      - "Raises on missing required config (e.g., namespace_salt)."
+
+non_goals:
+  - "Owning credential storage or caching."
+  - "Token refresh logic (delegated to SDK or caller)."
+  - "Multi-account credential management."
+
+examples:
+  - name: storacle.BigQueryEventStore
+    repo: workspace/storacle
+    notes: "Receives bigquery.Client; StoracleConfig.from_env() for config."
+  - name: gorch
+    repo: workspace/gorch
+    notes: "Google API clients injected; no credential handling."
+  - name: morch
+    repo: workspace/morch
+    notes: "Microsoft Graph client injected; no credential handling."

@@ -1,0 +1,58 @@
+# yaml-language-server: $schema=../../schemas/pattern.schema.json
+kind: pattern
+
+metadata:
+  name: semantic-client
+  version: "0.1.0"
+  description: "Thin wrapper over a storage adapter providing domain-specific operations."
+  status: active
+
+scope:
+  level: module
+  domain: data
+
+invariants:
+  - "Client is a thin layer; business logic lives in the domain, not the client."
+  - "Client wraps an adapter (e.g., BigQueryEventStore) and adds semantic meaning."
+  - "Multiple clients can share the same adapter instance."
+  - "Client method names reflect domain operations, not storage operations."
+  - "Client handles serialization (canonical JSON, timestamps) before calling adapter."
+
+required_interfaces:
+  constructor:
+    shape: "Client(adapter: Adapter, dataset: str, table: str)"
+    notes:
+      - "Adapter is injected, not constructed."
+      - "Dataset and table can have defaults."
+
+  domain_operation:
+    shape: "domain_method(**kwargs) -> result"
+    notes:
+      - "Method name reflects domain (append_event, log_event, not insert_row)."
+      - "Handles ID generation, timestamp normalization, payload hashing."
+      - "Delegates actual storage to adapter."
+
+  query_operation:
+    shape: "query_method(id) -> Iterator[DomainObject]"
+    notes:
+      - "Returns domain objects, not raw dicts."
+      - "Handles any necessary transformation (dedupe, ordering)."
+
+non_goals:
+  - "Complex business logic (belongs in domain layer)."
+  - "Multi-table transactions (each client owns one table)."
+  - "Schema validation (handled by adapter or separate layer)."
+
+examples:
+  - name: storacle.WalClient
+    repo: workspace/storacle
+    notes: "append_event(), query_aggregate() over wal.domain_events"
+  - name: storacle.OpsClient
+    repo: workspace/storacle
+    notes: "log_event() over ops.event_log"
+  - name: storacle.RawClient (future)
+    repo: workspace/storacle
+    notes: "Will wrap raw.raw_objects with merge semantics"
+  - name: storacle.CanonicalClient (future)
+    repo: workspace/storacle
+    notes: "Will wrap canonical.canonical_objects with merge semantics"

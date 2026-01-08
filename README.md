@@ -2,6 +2,8 @@
 
 Public, catalog-only registry of governance building blocks.
 
+See `PLANNED_BUILD.md` for how to use scopes, roles, and bindings.
+
 ## What belongs here
 
 - `pattern`: reusable architecture patterns (no instantiations)
@@ -15,7 +17,7 @@ Public, catalog-only registry of governance building blocks.
 
 Directory layout:
 
-- `patterns/<name>/<name>.pattern.yaml`
+- `patterns/<level>/<name>/<name>.pattern.yaml`
 - `contracts/<name>/<name>.contract.yaml`
 - `policies/<name>/<name>.policy.yaml`
 - `schemas/*.schema.json` (JSON Schema for each kind)
@@ -30,9 +32,5 @@ Schemas are intended to be used by tooling for validation. A quick local check c
 For editor support, add this directive at the top of YAML files:
 
 ```yaml
-# yaml-language-server: $schema=../../schemas/pattern.schema.json
+# yaml-language-server: $schema=../../../schemas/pattern.schema.json
 ```
-
-## Validation
-
-Schemas are intended to be used by tooling for validation. A quick local check can validate all YAML files by loading `schemas/*.schema.json` and validating each artifact by its `kind`.

@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=../../../schemas/pattern.schema.json
+kind: pattern
+
+metadata:
+  name: executor-owned-auth
+  version: "0.1.0"
+  description: "Executor/composition root is allowed to construct authenticated SDK clients (ADC/authctl) while adapters/clients remain auth-agnostic."
+  status: active
+
+scope:
+  level: module
+  domain: auth
+
+recommends_policies:
+  - credential-hygiene@0.1.0
+
+invariants:
+  - "Auth wiring is isolated to the executor/composition-root module (e.g., rpc.py)."
+  - "Modules under adapters/ and clients/ do not load credentials or secrets."
+  - "Executor may instantiate SDK clients using ambient credentials (e.g., ADC) or delegate to an external credential manager (e.g., authctl)."
+  - "Executor passes authenticated SDK clients into adapters/clients (dependency injection boundary)."
+  - "Executor never persists secrets or tokens into the repo; any caches must be governed and gitignored by policy."
+
+required_interfaces:
+  composition_root_factory:
+    shape: "build_*() helpers or factories in executor that construct authenticated SDK clients"
+    notes:
+      - "Examples: bigquery.Client(project=...), SheetsClient.from_authctl(account)."
+      - "This logic must not appear under adapters/ or clients/."
+
+  injection_boundary:
+    shape: "Adapter and client constructors accept SDK clients/adapters as args"
+    notes:
+      - "Adapters receive SDK clients; semantic clients receive adapters."
+      - "No credential-loading helpers inside adapters/ or clients/."
+
+non_goals:
+  - "Owning org-wide credential storage or caching."
+  - "Implementing a general-purpose auth manager (see auth-manager pattern)."
+  - "Multi-account credential routing inside the library modules."
+
+examples:
+  - name: storacle.rpc.execute_plan
+    repo: workspace/storacle
+    notes: "Executor wires BigQuery via ADC and Sheets via authctl; adapters/clients remain injection-based."

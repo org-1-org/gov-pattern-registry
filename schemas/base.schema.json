@@ -52,9 +52,12 @@
         "level": {
           "type": "string",
           "enum": [
+            "component",
             "module",
             "package",
             "repo",
+            "org",
+            "multi-repo",
             "system"
           ],
           "description": "Scope level for applicability"
@@ -63,6 +66,14 @@
           "type": "string",
           "pattern": "^[a-z][a-z0-9-]*$",
           "description": "Domain tag (e.g., auth, adapters, pdf, infra)"
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "description": "Optional role ids relevant to this artifact at this scope"
         }
       },
       "additionalProperties": true
